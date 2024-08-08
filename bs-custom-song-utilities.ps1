@@ -96,7 +96,7 @@ function Remove-UnlistedSongs {
     $songHashTable = Get-SongHashTable $shd_path
     Write-Host "songHashTable item count:" $songHashTable.Count
 
-    $songsNotInHashTable = 0; $savedSongs = 0; $deletedSongs = 0
+    $songsNotInHashTable = 0; $savedSongs = 0; $deletedSongs = 0; $bytesToDelete = 0
     
     # Loop through all custom song folders
     $custom_song_dirs = Get-ChildItem -LiteralPath $cldir -Directory -Depth 1
@@ -112,12 +112,17 @@ function Remove-UnlistedSongs {
         if ($matchInSongHashTable) {
             # Write-Host "Found matching song in Song Hash Table. Key ["$matchInSongHashTable.Key"] | Value: ["$matchInSongHashTable.Value"]"
             if ($all_songs_to_save.Contains($matchInSongHashTable.Key)) {
-                $savedSongs++
                 Write-Host "SAVE:" $matchInSongHashTable.Value
+                $savedSongs++
             }
             else {
-                $deletedSongs++
                 Write-Host "DELETE:" $matchInSongHashTable.Value
+                # Figure out the size of the folder
+                $dirObject = $custom_song_dir | Get-ChildItem | Measure-Object -Sum Length | Select-Object `
+                @{Name = ”Size”; Expression = { $_.Sum } }
+
+                $bytesToDelete += $dirObject.Size                
+                $deletedSongs++
             }
         }
         else {
@@ -127,7 +132,8 @@ function Remove-UnlistedSongs {
     }
 
     Write-Host "`n### Summary ###"
-    Write-Host "Songs Not Found in SongHashData.dat: $songsNotInHashTable | Songs Saved: $savedSongs | Songs Deleted: $deletedSongs"
+    $gigabytesToDelete = [Math]::Round($bytesToDelete / 1Gb, 3)
+    Write-Host "Songs Not Found in SongHashData.dat: $songsNotInHashTable | Songs Saved: $savedSongs | Songs Deleted: $deletedSongs | GB deleted: $gigabytesToDelete"
 }
 
 # Main Script Code
