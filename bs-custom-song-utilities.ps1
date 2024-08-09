@@ -19,8 +19,7 @@ function Test-Paths {
 
 function Get-PlayListSongHashes {
     $playlists = Get-ChildItem -Path $pldir -Filter *.bplist -Recurse -File -Name
-    $playlistsMeasure = $playlists | Measure-Object
-    $playListCount = $playlistsMeasure.Count
+    $playListCount = ($playlists | Measure-Object).Count
 
     Write-Host "Found this many playlists:" $playListCount
     if ($playListCount -lt 1) { 
@@ -29,12 +28,10 @@ function Get-PlayListSongHashes {
     }
 
     $playlist_songs = @()
-
     $playlists | ForEach-Object {
         $playlist = $_
         $bplistdir = $pldir + "\" + $playlist
-        Write-Host "Processing:" $bplistdir
-        
+        Write-Host "Processing:" $bplistdir        
         $jsonData = Get-Content -Path $bplistdir | ConvertFrom-Json
         Write-Host "Found this many songs:" $jsonData.songs.Count
         $jsonData.songs | ForEach-Object {
@@ -68,8 +65,7 @@ function Get-SongHashTable {
     param([string]$SongHashDataPath)
 
     $rawData = Get-Content -Path $SongHashDataPath
-    $isValid = $rawData | Test-Json
-    Write-Host "[Get-SongHashTable] Test-Json:" $isValid
+    Write-Host "[Get-SongHashTable] Test-Json:" ($rawData | Test-Json)
 
     $songHashTable = @{}
     $jsonData = $rawData | ConvertFrom-Json
@@ -87,6 +83,16 @@ function Get-SongHashTable {
     return $songHashTable
 }
 
+function Get-DirectorySizeInBytes {
+    param($directory)
+
+    $dirObject = $directory | Get-ChildItem | Measure-Object -Sum Length | Select-Object `
+    @{Name = ”Size”; Expression = { $_.Sum } }
+    # Write-Host "[Get-DirectorySizeInBytes]" $dirObject.Size
+
+    return $dirObject.Size
+}
+
 function Remove-UnlistedSongs {
     param([Bool]$removeSongs)
 
@@ -96,14 +102,12 @@ function Remove-UnlistedSongs {
     $songHashTable = Get-SongHashTable $shd_path
     Write-Host "songHashTable item count:" $songHashTable.Count
 
-    $songsNotInHashTable = 0; $savedSongs = 0; $deletedSongs = 0; $bytesToDelete = 0
-    
+    $songsNotInHashTable = 0; $savedSongs = 0; $deletedSongs = 0; $bytesToDelete = 0    
     # Loop through all custom song folders
     $custom_song_dirs = Get-ChildItem -LiteralPath $cldir -Directory -Depth 1
     ForEach ($custom_song_dir in $custom_song_dirs) {
         # Get the BeatSaver code
-        $pos = $custom_song_dir.Name.IndexOf(" (")
-        $beatSaverCode = $custom_song_dir.Name.Substring(0, $pos)
+        $beatSaverCode = $custom_song_dir.Name.Substring(0, $custom_song_dir.Name.IndexOf(" ("))
         # Write-Host "BeatSaver code: [$beatSaverCode]"
         # Use BeatSaver code to find entry in songHashTable
         $subString = $beatSaverCode + " ("
@@ -117,11 +121,8 @@ function Remove-UnlistedSongs {
             }
             else {
                 Write-Host "DELETE:" $matchInSongHashTable.Value
-                # Figure out the size of the folder
-                $dirObject = $custom_song_dir | Get-ChildItem | Measure-Object -Sum Length | Select-Object `
-                @{Name = ”Size”; Expression = { $_.Sum } }
 
-                $bytesToDelete += $dirObject.Size                
+                $bytesToDelete += Get-DirectorySizeInBytes $custom_song_dir
                 $deletedSongs++
             }
         }
@@ -140,12 +141,7 @@ function Remove-UnlistedSongs {
 "# Beat Saber Custom Song File Utilities #"
 "paramers supplied: [" + $PSBoundParameters.Keys + "] [" + $PSBoundParameters.Values + "]"
 
-if ($PSBoundParameters.ContainsKey('bsdir')) {
-    $wd = $bsdir
-}
-else {
-    $wd = Get-Location | Convert-Path
-}
+$wd = ($PSBoundParameters.ContainsKey('bsdir')) ? $bsdir : (Get-Location | Convert-Path)
 
 "Working Directory: " + $wd
 $pldir = $wd + "\Playlists"
