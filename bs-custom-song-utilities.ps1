@@ -88,7 +88,6 @@ function Get-DirectorySizeInBytes {
 
     $dirObject = $directory | Get-ChildItem | Measure-Object -Sum Length | Select-Object `
     @{Name = ”Size”; Expression = { $_.Sum } }
-    # Write-Host "[Get-DirectorySizeInBytes]" $dirObject.Size
 
     return $dirObject.Size
 }
@@ -102,7 +101,7 @@ function Remove-UnlistedSongs {
     $songHashTable = Get-SongHashTable $shd_path
     Write-Host "songHashTable item count:" $songHashTable.Count
 
-    $songsNotInHashTable = 0; $savedSongs = 0; $deletedSongs = 0; $bytesToDelete = 0    
+    $songsNotInHashTable = 0; $savedSongs = 0; $deletedSongs = 0; $bytesToDelete = 0; $bytesToSave = 0
     # Loop through all custom song folders
     $custom_song_dirs = Get-ChildItem -LiteralPath $cldir -Directory -Depth 1
     ForEach ($custom_song_dir in $custom_song_dirs) {
@@ -117,24 +116,26 @@ function Remove-UnlistedSongs {
             # Write-Host "Found matching song in Song Hash Table. Key ["$matchInSongHashTable.Key"] | Value: ["$matchInSongHashTable.Value"]"
             if ($all_songs_to_save.Contains($matchInSongHashTable.Key)) {
                 Write-Host "SAVE:" $matchInSongHashTable.Value
+                $bytesToSave += Get-DirectorySizeInBytes $custom_song_dir
                 $savedSongs++
             }
             else {
                 Write-Host "DELETE:" $matchInSongHashTable.Value
-
                 $bytesToDelete += Get-DirectorySizeInBytes $custom_song_dir
                 $deletedSongs++
             }
         }
         else {
-            $songsNotInHashTable++
             Write-Host "Did NOT find matching song in Song Hash Table. Do NOT delete. | " $custom_song_dir.Name
+            $bytesToSave += Get-DirectorySizeInBytes $custom_song_dir
+            $songsNotInHashTable++
         }
     }
 
     Write-Host "`n### Summary ###"
     $gigabytesToDelete = [Math]::Round($bytesToDelete / 1Gb, 3)
-    Write-Host "Songs Not Found in SongHashData.dat: $songsNotInHashTable | Songs Saved: $savedSongs | Songs Deleted: $deletedSongs | GB deleted: $gigabytesToDelete"
+    $gigabytesToSave = [Math]::Round($bytesToSave / 1Gb, 3)
+    Write-Host "Songs Not Found in SongHashData.dat: $songsNotInHashTable | Songs Saved: $savedSongs | Songs Deleted: $deletedSongs | GB deleted: $gigabytesToDelete | GB NOT deleted: $gigabytesToSave"
 }
 
 # Main Script Code
@@ -142,7 +143,6 @@ function Remove-UnlistedSongs {
 "paramers supplied: [" + $PSBoundParameters.Keys + "] [" + $PSBoundParameters.Values + "]"
 
 $wd = ($PSBoundParameters.ContainsKey('bsdir')) ? $bsdir : (Get-Location | Convert-Path)
-
 "Working Directory: " + $wd
 $pldir = $wd + "\Playlists"
 $player_data_path = "$env:USERPROFILE\AppData\LocalLow\Hyperbolic Magnetism\Beat Saber\PlayerData.dat"
@@ -165,10 +165,13 @@ switch ($task) {
     }
     "clean" {
         "## Performing Task: Clean up custon songs not in playlist or favorites ##"
+        Remove-UnlistedSongs $true
+
         Break
     }
     "backup" {
         "## Performing Task: Backing up playlists and favorites ##"
+        
         Break
     }
     Default {
