@@ -17,8 +17,13 @@ function Test-Paths {
     return $true
 }
 
+<#
+    Accepts a playlist directory and returns an array of song hashes (type: string) found in all playlists
+#>
 function Get-PlayListSongHashes {
-    $playlists = Get-ChildItem -Path $pldir -Filter *.bplist -Recurse -File -Name
+    param($directory)
+
+    $playlists = Get-ChildItem -Path $directory -Filter *.bplist -Recurse -File -Name
     $playListCount = ($playlists | Measure-Object).Count
 
     Write-Host "Found this many playlists:" $playListCount
@@ -35,8 +40,7 @@ function Get-PlayListSongHashes {
         $jsonData = Get-Content -Path $bplistdir | ConvertFrom-Json
         Write-Host "Found this many songs:" $jsonData.songs.Count
         $jsonData.songs | ForEach-Object {
-            $song = $_
-            $playlist_songs += $song.hash
+            $playlist_songs += $_.hash
         }
     }
 
@@ -45,10 +49,14 @@ function Get-PlayListSongHashes {
     return $playlist_songs
 }
 
+<#
+    Accepts a player data file path and returns an array of song hashes (type: string) found in favorites list
+#>
 function Get-FavoritesSongHashes {
-    $favorites_songs = @()
+    param($pdFilePath)
 
-    $jsonData = Get-Content -Path $player_data_path | ConvertFrom-Json
+    $favorites_songs = @()
+    $jsonData = Get-Content -Path $pdFilePath | ConvertFrom-Json
     if ($jsonData.localPlayers.favoritesLevelIds.Length -lt 1) {
         Write-Host "No favorites found. Too risky; exiting out." 
         Exit
@@ -93,10 +101,10 @@ function Get-DirectorySizeInBytes {
 }
 
 function Remove-UnlistedSongs {
-    param([Bool]$removeSongs)
+    param([Bool]$removeSongs, [string]$playlistDir, [string]$playerDataPath)
 
     Write-Host "Actually remove songs?" $removeSongs
-    $all_songs_to_save = $(Get-PlayListSongHashes; Get-FavoritesSongHashes) | Select-Object -Unique 
+    $all_songs_to_save = $(Get-PlayListSongHashes($playlistDir); Get-FavoritesSongHashes($playerDataPath)) | Select-Object -Unique 
     "Added this many unique hashes to NOT be deleted: " + $all_songs_to_save.Length
     $songHashTable = Get-SongHashTable $shd_path
     Write-Host "songHashTable item count:" $songHashTable.Count
@@ -159,13 +167,13 @@ if ("info", "clean", "backup" -contains $task) {
 switch ($task) {
     "info" {
         "## Performing Task: Info ##"
-        Remove-UnlistedSongs $false
+        Remove-UnlistedSongs $false $pldir $player_data_path
 
         Break
     }
     "clean" {
         "## Performing Task: Clean up custon songs not in playlist or favorites ##"
-        Remove-UnlistedSongs $true
+        Remove-UnlistedSongs $true $pldir $player_data_path
 
         Break
     }
