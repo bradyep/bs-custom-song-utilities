@@ -104,7 +104,7 @@ function Remove-UnlistedSongs {
     param([Bool]$removeSongs, [string]$playlistDir, [string]$playerDataPath, [string]$songHashDataPath, [string]$customLevelsPath)
 
     Write-Host "Actually remove songs?" $removeSongs
-    $all_songs_to_save = $(Get-PlayListSongHashes($playlistDir); Get-FavoritesSongHashes($playerDataPath)) | Select-Object -Unique 
+    $all_songs_to_save = $(Get-PlayListSongHashes($playlistDir); Get-FavoritesSongHashes($playerDataPath)) | Select-Object -Unique
     "Added this many unique hashes to NOT be deleted: " + $all_songs_to_save.Length
     $songHashTable = Get-SongHashTable $songHashDataPath
     Write-Host "songHashTable item count:" $songHashTable.Count
@@ -147,7 +147,37 @@ function Remove-UnlistedSongs {
 }
 
 function Backup-PlaylistsAndFavorites {
-    param([string]$playlistDir, [string]$playerDataPath)
+    param([string]$playlistDir, [string]$playerDataPath, [string]$songHashDataPath)
+
+    # Generate backup content from favorites
+    $songHashTable = Get-SongHashTable $songHashDataPath
+    $faveSongHashes = Get-FavoritesSongHashes($playerDataPath)
+    $playerFavoritesPlaylist = @()
+
+    ForEach ($faveSongHash in $faveSongHashes) {
+        $matchInSongHashTable = $songHashTable.GetEnumerator() | Where-Object { $_.Key -like $faveSongHash }
+        if ($matchInSongHashTable) { 
+            $matchingSongValue = $matchInSongHashTable.Value
+            $songNameStartPos = $matchingSongValue.IndexOf(" (")
+            $realSongStartPosition = $songNameStartPos + 2
+            $songNameEndPos = (($matchingSongValue).Length - $realSongStartPosition) - 1
+            $beatSaverCode = $matchingSongValue.Substring(0, $songNameStartPos)
+            
+            $songName = $matchingSongValue.Substring($realSongStartPosition, $songNameEndPos)
+            # Write-Host "Found match | bsr: [$beatSaverCode] | songNameStartPos: [$songNameStartPos] | songNameEndPos: [$songNameEndPos] | songName: [$songName] | matchingSongValue: [$matchingSongValue]"
+            $stringToAdd = "[$songName](https://beatsaver.com/maps/$beatSaverCode)"
+            Write-Host "Adding: $stringToAdd"
+            $playerFavoritesPlaylist += $stringToAdd
+        } 
+        else {
+            Write-Host "Could not find match for hash:" $faveSongHash
+        }
+    }
+
+    $playlistsToBackup = @{}
+    $playlistsToBackup['player-favorites'] = $playerFavoritesPlaylist
+
+    # Generate backup content from playlists
 }
 
 # Main Script Code
@@ -183,6 +213,7 @@ switch ($task) {
     }
     "backup" {
         "## Performing Task: Backing up playlists and favorites ##"
+        Backup-PlaylistsAndFavorites $pldir $player_data_path $shd_path
         
         Break
     }
