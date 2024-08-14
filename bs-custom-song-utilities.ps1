@@ -101,17 +101,17 @@ function Get-DirectorySizeInBytes {
 }
 
 function Remove-UnlistedSongs {
-    param([Bool]$removeSongs, [string]$playlistDir, [string]$playerDataPath)
+    param([Bool]$removeSongs, [string]$playlistDir, [string]$playerDataPath, [string]$songHashDataPath, [string]$customLevelsPath)
 
     Write-Host "Actually remove songs?" $removeSongs
     $all_songs_to_save = $(Get-PlayListSongHashes($playlistDir); Get-FavoritesSongHashes($playerDataPath)) | Select-Object -Unique 
     "Added this many unique hashes to NOT be deleted: " + $all_songs_to_save.Length
-    $songHashTable = Get-SongHashTable $shd_path
+    $songHashTable = Get-SongHashTable $songHashDataPath
     Write-Host "songHashTable item count:" $songHashTable.Count
 
     $songsNotInHashTable = 0; $savedSongs = 0; $deletedSongs = 0; $bytesToDelete = 0; $bytesToSave = 0
     # Loop through all custom song folders
-    $custom_song_dirs = Get-ChildItem -LiteralPath $cldir -Directory -Depth 1
+    $custom_song_dirs = Get-ChildItem -LiteralPath $customLevelsPath -Directory -Depth 1
     ForEach ($custom_song_dir in $custom_song_dirs) {
         # Get the BeatSaver code
         $beatSaverCode = $custom_song_dir.Name.Substring(0, $custom_song_dir.Name.IndexOf(" ("))
@@ -146,6 +146,10 @@ function Remove-UnlistedSongs {
     Write-Host "Songs Not Found in SongHashData.dat: $songsNotInHashTable | Songs Saved: $savedSongs | Songs Deleted: $deletedSongs | GB deleted: $gigabytesToDelete | GB NOT deleted: $gigabytesToSave"
 }
 
+function Backup-PlaylistsAndFavorites {
+    param([string]$playlistDir, [string]$playerDataPath)
+}
+
 # Main Script Code
 "# Beat Saber Custom Song File Utilities #"
 "paramers supplied: [" + $PSBoundParameters.Keys + "] [" + $PSBoundParameters.Values + "]"
@@ -167,13 +171,13 @@ if ("info", "clean", "backup" -contains $task) {
 switch ($task) {
     "info" {
         "## Performing Task: Info ##"
-        Remove-UnlistedSongs $false $pldir $player_data_path
+        Remove-UnlistedSongs $false $pldir $player_data_path $shd_path $cldir
 
         Break
     }
     "clean" {
         "## Performing Task: Clean up custon songs not in playlist or favorites ##"
-        Remove-UnlistedSongs $true $pldir $player_data_path
+        Remove-UnlistedSongs $true $pldir $player_data_path $shd_path $cldir
 
         Break
     }
