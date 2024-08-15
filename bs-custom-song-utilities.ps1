@@ -178,6 +178,30 @@ function Backup-PlaylistsAndFavorites {
     $playlistsToBackup['player-favorites'] = $playerFavoritesPlaylist
 
     # Generate backup content from playlists
+    $playlists = Get-ChildItem -Path $playlistDir -Filter *.bplist -Recurse -File -Name
+    $playListCount = ($playlists | Measure-Object).Count
+    Write-Host "Found this many playlists:" $playListCount
+
+    $playlists | ForEach-Object {
+        $playlistSongs = @()
+        $playlist = $_
+        $bplistdir = $pldir + "\" + $playlist
+        $jsonData = Get-Content -Path $bplistdir | ConvertFrom-Json
+        $playlistName = $jsonData.playlistTitle
+        Write-Host "Processing: $playlistName | Location:" $bplistdir        
+        Write-Host "Found this many songs:" $jsonData.songs.Count
+        $jsonData.songs | ForEach-Object {
+            $key = $_.key
+            $songName = $_.songName
+            $stringToAdd = "[$songName](https://beatsaver.com/maps/$key)"
+            Write-Host "Adding: $stringToAdd"
+            $playlistSongs += $stringToAdd
+        }
+
+        $playlistsToBackup[$playlistName] = $playerFavoritesPlaylist
+    }
+    # Write $playlistsToBackup to a .md file
+    
 }
 
 # Main Script Code
