@@ -153,6 +153,8 @@ function Backup-PlaylistsAndFavorites {
     $songHashTable = Get-SongHashTable $songHashDataPath
     $faveSongHashes = Get-FavoritesSongHashes($playerDataPath)
     $playerFavoritesPlaylist = @()
+    $playerFavoritesPlaylist += "# Beat Saber Custom Song Backup"
+    $playerFavoritesPlaylist += "`n## Favorites"
 
     ForEach ($faveSongHash in $faveSongHashes) {
         $matchInSongHashTable = $songHashTable.GetEnumerator() | Where-Object { $_.Key -like $faveSongHash }
@@ -165,7 +167,7 @@ function Backup-PlaylistsAndFavorites {
             
             $songName = $matchingSongValue.Substring($realSongStartPosition, $songNameEndPos)
             # Write-Host "Found match | bsr: [$beatSaverCode] | songNameStartPos: [$songNameStartPos] | songNameEndPos: [$songNameEndPos] | songName: [$songName] | matchingSongValue: [$matchingSongValue]"
-            $stringToAdd = "[$songName](https://beatsaver.com/maps/$beatSaverCode)"
+            $stringToAdd = "* [$songName](https://beatsaver.com/maps/$beatSaverCode)"
             Write-Host "Adding: $stringToAdd"
             $playerFavoritesPlaylist += $stringToAdd
         } 
@@ -174,7 +176,7 @@ function Backup-PlaylistsAndFavorites {
         }
     }
 
-    $playlistsToBackup = @{}
+    $playlistsToBackup = [ordered]@{}
     $playlistsToBackup['player-favorites'] = $playerFavoritesPlaylist
 
     # Generate backup content from playlists
@@ -183,25 +185,39 @@ function Backup-PlaylistsAndFavorites {
     Write-Host "Found this many playlists:" $playListCount
 
     $playlists | ForEach-Object {
-        $playlistSongs = @()
         $playlist = $_
         $bplistdir = $pldir + "\" + $playlist
         $jsonData = Get-Content -Path $bplistdir | ConvertFrom-Json
+
         $playlistName = $jsonData.playlistTitle
+        $playlistSongs = @()
+        $playlistSongs += "`n## $playlistName"
         Write-Host "Processing: $playlistName | Location:" $bplistdir        
         Write-Host "Found this many songs:" $jsonData.songs.Count
         $jsonData.songs | ForEach-Object {
             $key = $_.key
             $songName = $_.songName
-            $stringToAdd = "[$songName](https://beatsaver.com/maps/$key)"
+            $stringToAdd = "* [$songName](https://beatsaver.com/maps/$key)"
             Write-Host "Adding: $stringToAdd"
             $playlistSongs += $stringToAdd
         }
 
-        $playlistsToBackup[$playlistName] = $playerFavoritesPlaylist
+        $playlistsToBackup[$playlistName] = $playlistSongs
     }
     # Write $playlistsToBackup to a .md file
-    
+    $backupFileName = "bs-custom-song-backup-" + (Get-Date -Format "yyyy-MM-dd").ToString() + ".md"
+    Write-Host "File name:" $backupFileName
+    $stringToWrite = ""
+    foreach ($pl in $playlistsToBackup.GetEnumerator()) {
+        # $songsInPl = $pl.Value.Count
+        # Write-Host "Writing: $($pl.Name) | $songsInPl"
+        # Write-Host "Writing: $($pl.Name): $($h.Value)"
+        foreach ($song in $pl.value) {
+            Write-Host "Writing: $song"
+            $stringToWrite += $song + "`n"
+        }
+    }
+    $stringToWrite | Out-File -FilePath .\$backupFileName
 }
 
 # Main Script Code
