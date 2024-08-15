@@ -1,11 +1,11 @@
-param ($bsdir, $task)
+param ($bsdir, $task, [switch]$verbose = $false)
 
 function Test-Paths {
     param([string]$PlaylistDirectory, [string]$PlayerDataPath, [string]$SongHashDataPath, [string]$CustomLevelsPath)
 
     foreach ($path in $PSBoundParameters.GetEnumerator()) {
         if (Test-Path -Path $path.Value) {
-            Write-Host $path.Key "exists at: " $path.Value
+            if ($verbose) { Write-Host $path.Key "exists at: " $path.Value }
         }
         else {
             Write-Host $path.Key "does NOT exist at: " $path.Value
@@ -36,9 +36,9 @@ function Get-PlayListSongHashes {
     $playlists | ForEach-Object {
         $playlist = $_
         $bplistdir = $pldir + "\" + $playlist
-        Write-Host "Processing:" $bplistdir        
+        if ($verbose) { Write-Host "Processing:" $bplistdir }
         $jsonData = Get-Content -Path $bplistdir | ConvertFrom-Json
-        Write-Host "Found this many songs:" $jsonData.songs.Count
+        if ($verbose) { Write-Host "Found this many songs:" $jsonData.songs.Count }
         $jsonData.songs | ForEach-Object {
             $playlist_songs += $_.hash
         }
@@ -73,14 +73,14 @@ function Get-SongHashTable {
     param([string]$SongHashDataPath)
 
     $rawData = Get-Content -Path $SongHashDataPath
-    Write-Host "[Get-SongHashTable] Test-Json:" ($rawData | Test-Json)
+    if ($verbose) { Write-Host "[Get-SongHashTable] Test-Json:" ($rawData | Test-Json) }
 
     $songHashTable = @{}
     $jsonData = $rawData | ConvertFrom-Json
     foreach ($elem in $jsonData.PsObject.Properties) {
         $songDir = $elem.Name -replace '.*\\'
         $songHashTable[$elem.VALUE.songHash] = $songDir
-        Write-Host "[Get-SongHashTable] Added to songHashTable:" $elem.VALUE.songHash " | " $songDir
+        if ($verbose) { Write-Host "[Get-SongHashTable] Added to songHashTable:" $elem.VALUE.songHash " | " $songDir }
     }
     
     if ($songHashTable.Count -lt 1) {
@@ -103,11 +103,11 @@ function Get-DirectorySizeInBytes {
 function Remove-UnlistedSongs {
     param([Bool]$removeSongs, [string]$playlistDir, [string]$playerDataPath, [string]$songHashDataPath, [string]$customLevelsPath)
 
-    Write-Host "Actually remove songs?" $removeSongs
+    if ($verbose) { Write-Host "Actually remove songs?" $removeSongs }
     $all_songs_to_save = $(Get-PlayListSongHashes($playlistDir); Get-FavoritesSongHashes($playerDataPath)) | Select-Object -Unique
-    "Added this many unique hashes to NOT be deleted: " + $all_songs_to_save.Length
+    if ($verbose) { "Added this many unique hashes to NOT be deleted: " + $all_songs_to_save.Length }
     $songHashTable = Get-SongHashTable $songHashDataPath
-    Write-Host "songHashTable item count:" $songHashTable.Count
+    if ($verbose) { Write-Host "songHashTable item count:" $songHashTable.Count }
 
     $songsNotInHashTable = 0; $savedSongs = 0; $deletedSongs = 0; $bytesToDelete = 0; $bytesToSave = 0
     # Loop through all custom song folders
@@ -115,26 +115,23 @@ function Remove-UnlistedSongs {
     ForEach ($custom_song_dir in $custom_song_dirs) {
         # Get the BeatSaver code
         $beatSaverCode = $custom_song_dir.Name.Substring(0, $custom_song_dir.Name.IndexOf(" ("))
-        # Write-Host "BeatSaver code: [$beatSaverCode]"
         # Use BeatSaver code to find entry in songHashTable
         $subString = $beatSaverCode + " ("
-        # Write-Host "Using substring:" $subString
         $matchInSongHashTable = $songHashTable.GetEnumerator() | Where-Object { $_.Value -like "$subString*" } | Select-Object -first 1
         if ($matchInSongHashTable) {
-            # Write-Host "Found matching song in Song Hash Table. Key ["$matchInSongHashTable.Key"] | Value: ["$matchInSongHashTable.Value"]"
             if ($all_songs_to_save.Contains($matchInSongHashTable.Key)) {
-                Write-Host "SAVE:" $matchInSongHashTable.Value
+                if ($verbose) { Write-Host "SAVE:" $matchInSongHashTable.Value }
                 $bytesToSave += Get-DirectorySizeInBytes $custom_song_dir
                 $savedSongs++
             }
             else {
-                Write-Host "DELETE:" $matchInSongHashTable.Value
+                if ($verbose) { Write-Host "DELETE:" $matchInSongHashTable.Value }
                 $bytesToDelete += Get-DirectorySizeInBytes $custom_song_dir
                 $deletedSongs++
             }
         }
         else {
-            Write-Host "Did NOT find matching song in Song Hash Table. Do NOT delete. | " $custom_song_dir.Name
+            if ($verbose) { Write-Host "Did NOT find matching song in Song Hash Table. Do NOT delete. | " $custom_song_dir.Name }
             $bytesToSave += Get-DirectorySizeInBytes $custom_song_dir
             $songsNotInHashTable++
         }
@@ -166,9 +163,8 @@ function Backup-PlaylistsAndFavorites {
             $beatSaverCode = $matchingSongValue.Substring(0, $songNameStartPos)
             
             $songName = $matchingSongValue.Substring($realSongStartPosition, $songNameEndPos)
-            # Write-Host "Found match | bsr: [$beatSaverCode] | songNameStartPos: [$songNameStartPos] | songNameEndPos: [$songNameEndPos] | songName: [$songName] | matchingSongValue: [$matchingSongValue]"
             $stringToAdd = "* [$songName](https://beatsaver.com/maps/$beatSaverCode)"
-            Write-Host "Adding: $stringToAdd"
+            if ($verbose) { Write-Host "Adding: $stringToAdd" }
             $playerFavoritesPlaylist += $stringToAdd
         } 
         else {
@@ -192,13 +188,13 @@ function Backup-PlaylistsAndFavorites {
         $playlistName = $jsonData.playlistTitle
         $playlistSongs = @()
         $playlistSongs += "`n## $playlistName"
-        Write-Host "Processing: $playlistName | Location:" $bplistdir        
-        Write-Host "Found this many songs:" $jsonData.songs.Count
+        if ($verbose) { Write-Host "Processing: $playlistName | Location:" $bplistdir }
+        if ($verbose) { Write-Host "Found this many songs:" $jsonData.songs.Count }
         $jsonData.songs | ForEach-Object {
             $key = $_.key
             $songName = $_.songName
             $stringToAdd = "* [$songName](https://beatsaver.com/maps/$key)"
-            Write-Host "Adding: $stringToAdd"
+            if ($verbose) { Write-Host "Adding: $stringToAdd" }
             $playlistSongs += $stringToAdd
         }
 
@@ -209,11 +205,8 @@ function Backup-PlaylistsAndFavorites {
     Write-Host "File name:" $backupFileName
     $stringToWrite = ""
     foreach ($pl in $playlistsToBackup.GetEnumerator()) {
-        # $songsInPl = $pl.Value.Count
-        # Write-Host "Writing: $($pl.Name) | $songsInPl"
-        # Write-Host "Writing: $($pl.Name): $($h.Value)"
         foreach ($song in $pl.value) {
-            Write-Host "Writing: $song"
+            if ($verbose) { Write-Host "Writing: $song" }
             $stringToWrite += $song + "`n"
         }
     }
@@ -222,10 +215,10 @@ function Backup-PlaylistsAndFavorites {
 
 # Main Script Code
 "# Beat Saber Custom Song File Utilities #"
-"paramers supplied: [" + $PSBoundParameters.Keys + "] [" + $PSBoundParameters.Values + "]"
+if ($verbose) { "paramers supplied: [" + $PSBoundParameters.Keys + "] [" + $PSBoundParameters.Values + "]" }
 
 $wd = ($PSBoundParameters.ContainsKey('bsdir')) ? $bsdir : (Get-Location | Convert-Path)
-"Working Directory: " + $wd
+if ($verbose) { "Working Directory: " + $wd }
 $pldir = $wd + "\Playlists"
 $player_data_path = "$env:USERPROFILE\AppData\LocalLow\Hyperbolic Magnetism\Beat Saber\PlayerData.dat"
 $shd_path = $wd + "\UserData\SongCore\SongHashData.dat"
