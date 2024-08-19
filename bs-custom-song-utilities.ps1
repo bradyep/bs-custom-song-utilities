@@ -105,7 +105,7 @@ function Remove-UnlistedSongs {
 
     if ($verbose) { Write-Host "Actually remove songs?" $removeSongs }
     $all_songs_to_save = $(Get-PlayListSongHashes($playlistDir); Get-FavoritesSongHashes($playerDataPath)) | Select-Object -Unique
-    if ($verbose) { "Added this many unique hashes to NOT be deleted: " + $all_songs_to_save.Length }
+    Write-Host "Added this many unique songs to NOT be deleted:" $all_songs_to_save.Length
     $songHashTable = Get-SongHashTable $songHashDataPath
     if ($verbose) { Write-Host "songHashTable item count:" $songHashTable.Count }
 
@@ -137,10 +137,14 @@ function Remove-UnlistedSongs {
         }
     }
 
-    Write-Host "`n### Summary ###"
-    $gigabytesToDelete = [Math]::Round($bytesToDelete / 1Gb, 3)
-    $gigabytesToSave = [Math]::Round($bytesToSave / 1Gb, 3)
-    Write-Host "Songs Not Found in SongHashData.dat: $songsNotInHashTable | Songs Saved: $savedSongs | Songs Deleted: $deletedSongs | GB deleted: $gigabytesToDelete | GB NOT deleted: $gigabytesToSave"
+    $removeSongsSummary = @{}
+    $removeSongsSummary["songsNotInHashTable"] = $songsNotInHashTable
+    $removeSongsSummary["savedSongs"] = $savedSongs
+    $removeSongsSummary["deletedSongs"] = $deletedSongs
+    $removeSongsSummary["gigabytesToDelete"] = [Math]::Round($bytesToDelete / 1Gb, 3)
+    $removeSongsSummary["gigabytesToSave"] = [Math]::Round($bytesToSave / 1Gb, 3)
+
+    return $removeSongsSummary
 }
 
 function Backup-PlaylistsAndFavorites {
@@ -214,9 +218,7 @@ function Backup-PlaylistsAndFavorites {
 }
 
 # Main Script Code
-"# Beat Saber Custom Song File Utilities #"
 if ($verbose) { "paramers supplied: [" + $PSBoundParameters.Keys + "] [" + $PSBoundParameters.Values + "]" }
-
 $wd = ($PSBoundParameters.ContainsKey('bsdir')) ? $bsdir : (Get-Location | Convert-Path)
 if ($verbose) { "Working Directory: " + $wd }
 $pldir = $wd + "\Playlists"
@@ -234,13 +236,17 @@ if ("info", "clean", "backup" -contains $task) {
 switch ($task) {
     "info" {
         "## Performing Task: Info ##"
-        Remove-UnlistedSongs $false $pldir $player_data_path $shd_path $cldir
+        $summary = Remove-UnlistedSongs $false $pldir $player_data_path $shd_path $cldir
+        Write-Host "`n### Summary ###"
+        Write-Host "Songs not found in SongHashData.dat:" $summary.songsNotInHashTable "| Songs to be saved:" $summary.savedSongs "| Songs to be deleted:" $summary.deletedSongs "| GB to be deleted:" $summary.gigabytesToDelete "| GB to NOT be deleted:" $summary.gigabytesToSave
 
         Break
     }
     "clean" {
         "## Performing Task: Clean up custon songs not in playlist or favorites ##"
-        Remove-UnlistedSongs $true $pldir $player_data_path $shd_path $cldir
+        $summary = Remove-UnlistedSongs $true $pldir $player_data_path $shd_path $cldir
+        Write-Host "`n### Summary ###"
+        Write-Host "Songs Not Found in SongHashData.dat:" $summary.songsNotInHashTable "| Songs Saved:" $summary.savedSongs "| Songs Deleted:" $summary.deletedSongs "| GB deleted:" $summary.gigabytesToDelete "| GB NOT deleted:" $summary.gigabytesToSave
 
         Break
     }
@@ -251,6 +257,6 @@ switch ($task) {
         Break
     }
     Default {
-        "## show readme ##"
+        Get-Content README.md
     }
 }
