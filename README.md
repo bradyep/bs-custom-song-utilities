@@ -10,6 +10,10 @@ The script can do these things:
 * Give you an overview of how many songs are in your favorites and playlists and how much hard drive space you can save by deleting all other custom songs
 * Delete all custom songs not found in your favorites or in a playlist
 
+## Installation
+
+It's just a Powershell script, so no installation required. Simply click on the file name (`bs-custom-song-utilities.ps1`) above in GitHub to open the page for the script and then click the 'Download raw file' button on the upper-right to download the script.
+
 ## Usage
 
 Run the script without any parameters for an overview on how to use it:
@@ -35,3 +39,7 @@ To get an overview of what would happen if you were to run the `clean` option (d
 To actually delete all of your custom songs not in favorites or in a playlist, supply `clean` to the `task` parameter:
 
 `.\bs-custom-song-utilities.ps1 -bsdir "G:\Games\Steam\steamapps\common\Beat Saber" -task clean`
+
+If you want to nerd it up and get more information while the script runs, simply add the `-verbose` argument. It's just a switch and does not need any parameters supplied to it. Ex:
+
+`.\bs-custom-song-utilities.ps1 -bsdir "G:\Games\Steam\steamapps\common\Beat Saber" -task info -verbose`

@@ -127,6 +127,7 @@ function Remove-UnlistedSongs {
             else {
                 if ($verbose) { Write-Host "DELETE:" $matchInSongHashTable.Value }
                 $bytesToDelete += Get-DirectorySizeInBytes $custom_song_dir
+                if ($removeSongs -eq $true) { Remove-Item -LiteralPath $custom_song_dir -Force -Recurse }
                 $deletedSongs++
             }
         }
