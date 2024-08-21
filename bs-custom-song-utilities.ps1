@@ -244,7 +244,7 @@ switch ($task) {
         Break
     }
     "clean" {
-        "## Performing Task: Clean up custon songs not in playlist or favorites ##"
+        "## Performing Task: Clean up custom songs not in playlist or favorites ##"
         $prompt = Read-Host "WARNING: This will delete any custom songs you have that are not in a playlist or in your favorites. You should probably run this script with -task info first to see what will be deleted. Do you still want to proceed? [Type 'yes' without quotes to proceed]"
         if ($prompt.ToLower() -ne "yes") { Exit }
         $summary = Remove-UnlistedSongs $true $pldir $player_data_path $shd_path $cldir
