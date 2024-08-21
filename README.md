@@ -10,9 +10,13 @@ The script can do these things:
 * Give you an overview of how many songs are in your favorites and playlists and how much hard drive space you can save by deleting all other custom songs
 * Delete all custom songs not found in your favorites or in a playlist
 
-## Installation
+## Setup
 
-It's just a Powershell script, so no installation required. Simply click on the file name (`bs-custom-song-utilities.ps1`) above in GitHub to open the page for the script and then click the 'Download raw file' button on the upper-right to download the script.
+It's just a Powershell script, so no installation required. Simply click on the file name (`bs-custom-song-utilities.ps1`) above in GitHub to open the page for the script and then click the 'Download raw file' button on the upper-right to download the script. 
+
+If Windows is stopping you from running scripts downloaded from the internet you can allow them to run with this command:
+
+`Set-ExecutionPolicy -ExecutionPolicy Unrestricted`
 
 ## Usage
 

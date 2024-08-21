@@ -260,6 +260,29 @@ switch ($task) {
         Break
     }
     Default {
-        Get-Content README.md
+        Write-Host "You will need to know where Beat Saber is installed on your machine. For example on my machine its 
+
+G:\Games\Steam\steamapps\common\Beat Saber
+
+Include this path in quotes after the bsdir parameter - see examples below. Alternatively you can just copy the bs-custom-song-utilities.ps1 script into that directory and run it there without any bsdir parameter.
+
+To backup all of your favorites and playlist songs to a markdown file, supply backup to the task parameter like this:
+
+.\bs-custom-song-utilities.ps1 -bsdir 'G:\Games\Steam\steamapps\common\Beat Saber' -task backup
+
+This will create a markdown file (extension .md) wherever you ran the script from. Markdown files are just text but you can view them neatly formatted with working links in something like Visual Studio Code. 
+
+To get an overview of what would happen if you were to run the clean option (delete all custom songs not in favorites or a playlist) **without** actually deleting anything, supply info to the task parameter:
+
+.\bs-custom-song-utilities.ps1 -bsdir 'G:\Games\Steam\steamapps\common\Beat Saber' -task info
+
+To actually delete all of your custom songs not in favorites or in a playlist, supply clean to the task parameter:
+
+.\bs-custom-song-utilities.ps1 -bsdir 'G:\Games\Steam\steamapps\common\Beat Saber' -task clean
+
+If you want to nerd it up and get more information while the script runs, simply add the -verbose argument. Its just a switch and does not need any parameters supplied to it. Ex:
+
+.\bs-custom-song-utilities.ps1 -bsdir 'G:\Games\Steam\steamapps\common\Beat Saber' -task info -verbose
+"
     }
 }
