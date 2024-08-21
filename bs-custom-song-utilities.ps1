@@ -171,7 +171,7 @@ function Backup-PlaylistsAndFavorites {
             $stringToAdd = "* [$songName](https://beatsaver.com/maps/$beatSaverCode)"
             if ($verbose) { Write-Host "Adding: $stringToAdd" }
             $playerFavoritesPlaylist += $stringToAdd
-        } 
+        }
         else {
             Write-Host "Could not find match for hash:" $faveSongHash
         }
@@ -196,7 +196,20 @@ function Backup-PlaylistsAndFavorites {
         if ($verbose) { Write-Host "Processing: $playlistName | Location:" $bplistdir }
         if ($verbose) { Write-Host "Found this many songs:" $jsonData.songs.Count }
         $jsonData.songs | ForEach-Object {
-            $key = $_.key
+            $songHash = $_.hash
+
+            # We might not be able to get the key/bsr from certain playlists, so try to grab it from songHashTable
+            $matchInSongHashTable = $songHashTable.GetEnumerator() | Where-Object { $_.Key -like $songHash }
+            if ($matchInSongHashTable) { 
+                $matchingSongValue = $matchInSongHashTable.Value
+                $songNameStartPos = $matchingSongValue.IndexOf(" (")
+                $beatSaverCode = $matchingSongValue.Substring(0, $songNameStartPos)
+                $key = $beatSaverCode
+            }
+            else {
+                $key = $_.key
+            }
+
             $songName = $_.songName
             $stringToAdd = "* [$songName](https://beatsaver.com/maps/$key)"
             if ($verbose) { Write-Host "Adding: $stringToAdd" }
